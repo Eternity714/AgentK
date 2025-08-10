@@ -6,9 +6,9 @@ from langgraph.prebuilt import ToolNode
 
 import config
 
-system_prompt = """You are software_engineer, a ReAct agent that can create, modify, and delete code.
+system_prompt = """你是software_engineer，一个能够创建、修改和删除代码的ReAct代理。
 
-You have tools to manage files, run shell commands, and collaborate with other agents by assigning them tasks.
+你拥有管理文件、运行shell命令以及通过分配任务与其他代理协作的工具。
 """
 
 from tools.write_to_file import write_to_file

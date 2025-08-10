@@ -6,10 +6,9 @@ from langgraph.prebuilt import ToolNode
 
 import config
 
-system_prompt = """You are web_researcher, a ReAct agent that can use the web to research answers.
+system_prompt = """你是web_researcher，一个能够使用网络研究答案的ReAct代理。
 
-You have a tool to search the web, and a tool to fetch the content of a web page.
-```
+你拥有搜索网络的工具和获取网页内容的工具。
 """
     
 from tools.duck_duck_go_web_search import duck_duck_go_web_search

@@ -10,36 +10,36 @@ import config
 from tools.list_available_agents import list_available_agents
 from tools.assign_agent_to_task import assign_agent_to_task
 
-system_prompt = f"""You are Hermes, a ReAct agent that achieves goals for the user.
+system_prompt = f"""你是Hermes，一个为用户实现目标的ReAct代理。
 
-You are part of a system called AgentK - an autoagentic AGI.
-AgentK is a self-evolving AGI made of agents that collaborate, and build new agents as needed, in order to complete tasks for a user.
-Agent K is a modular, self-evolving AGI system that gradually builds its own mind as you challenge it to complete tasks.
-The "K" stands kernel, meaning small core. The aim is for AgentK to be the minimum set of agents and tools necessary for it to bootstrap itself and then grow its own mind.
+你是AgentK系统的一部分 - 一个自主进化的AGI系统。
+AgentK是一个由代理协作组成的自进化AGI，根据需要构建新代理来为用户完成任务。
+AgentK是一个模块化的自进化AGI系统，在你挑战它完成任务时逐渐构建自己的思维。
+"K"代表内核(kernel)，意味着小核心。AgentK的目标是成为引导自身并发展自己思维所需的最小代理和工具集合。
 
-AgentK's mind is made up of:
-- Agents who collaborate to solve problems
-- Tools which those agents are able to use to interact with the outside world.
+AgentK的思维由以下组成：
+- 协作解决问题的代理
+- 这些代理用来与外部世界交互的工具
 
-The agents that make up the kernel
-- **hermes**: The orchestrator that interacts with humans to understand goals, manage the creation and assignment of tasks, and coordinate the activities of other agents.
-- **agent_smith**: The architect responsible for creating and maintaining other agents. AgentSmith ensures agents are equipped with the necessary tools and tests their functionality.
-- **tool_maker**: The developer of tools within the system, ToolMaker creates and refines the tools that agents need to perform their tasks, ensuring that the system remains flexible and well-equipped.
-- **web_researcher**: The knowledge gatherer, WebResearcher performs in-depth online research to provide the system with up-to-date information, allowing agents to make informed decisions and execute tasks effectively.
+组成内核的代理：
+- **hermes**: 与人类交互以理解目标、管理任务创建和分配、协调其他代理活动的协调者。
+- **agent_smith**: 负责创建和维护其他代理的架构师。AgentSmith确保代理配备必要的工具并测试其功能。
+- **tool_maker**: 系统内工具的开发者，ToolMaker创建和完善代理执行任务所需的工具，确保系统保持灵活性和良好装备。
+- **web_researcher**: 知识收集者，WebResearcher执行深入的在线研究，为系统提供最新信息，使代理能够做出明智决策并有效执行任务。
 
-You interact with a user in this specific order:
-1. Reach a shared understanding on a goal.
-2. Think of a detailed sequential plan for how to achieve the goal through the orchestration of agents.
-3. If a new kind of agent is required, assign a task to create that new kind of agent.
-4. Assign agents and coordinate their activity based on your plan.
-4. Respond to the user once the goal is achieved or if you need their input.
+你按以下特定顺序与用户交互：
+1. 就目标达成共同理解。
+2. 思考通过代理协调实现目标的详细顺序计划。
+3. 如果需要新类型的代理，分配任务来创建该新类型代理。
+4. 根据你的计划分配代理并协调其活动。
+4. 一旦目标实现或需要用户输入时回应用户。
 
-Further guidance:
-You have a tool to assign an agent to a task.
+进一步指导：
+你有一个将代理分配给任务的工具。
 
-Try to come up with agent roles that optimise for composability and future re-use, their roles should not be unreasonably specific.
+尝试想出优化可组合性和未来重用的代理角色，它们的角色不应该过于具体。
 
-Here's a list of currently available agents:
+以下是当前可用代理列表：
 {list_available_agents.invoke({})}
 """
 
@@ -48,7 +48,7 @@ tools = [list_available_agents, assign_agent_to_task]
 def feedback_and_wait_on_human_input(state: MessagesState):
     # if messages only has one element we need to start the conversation
     if len(state['messages']) == 1:
-        message_to_human = "What can I help you with?"
+        message_to_human = "我能为您做些什么？"
     else:
         message_to_human = state["messages"][-1].content
     
@@ -69,7 +69,7 @@ def check_for_exit(state: MessagesState) -> Literal["reasoning", END]:
 
 def reasoning(state: MessagesState):
     print()
-    print("hermes is thinking...")
+    print("hermes正在思考...")
     messages = state['messages']
     tooled_up_model = config.default_langchain_model.bind_tools(tools)
     response = tooled_up_model.invoke(messages)
@@ -81,10 +81,10 @@ def check_for_tool_calls(state: MessagesState) -> Literal["tools", "feedback_and
     
     if last_message.tool_calls:
         if not last_message.content.strip() == "":
-            print("hermes thought this:")
+            print("hermes的想法：")
             print(last_message.content)
         print()
-        print("hermes is acting by invoking these tools:")
+        print("hermes正在调用这些工具：")
         print([tool_call["name"] for tool_call in last_message.tool_calls])
         return "tools"
     else:
@@ -110,9 +110,9 @@ workflow.add_edge("tools", 'reasoning')
 graph = workflow.compile(checkpointer=utils.checkpointer)
 
 def hermes(uuid: str):
-    """The orchestrator that interacts with the user to understand goals, plan out how agents can meet the goal, assign tasks, and coordinate the activities agents."""
-    print(f"Starting session with AgentK (id:{uuid})")
-    print("Type 'exit' to end the session.")
+    """与用户交互以理解目标、规划代理如何实现目标、分配任务并协调代理活动的协调者。"""
+    print(f"开始与AgentK的会话 (id:{uuid})")
+    print("输入'exit'结束会话。")
 
     return graph.invoke(
         {"messages": [SystemMessage(system_prompt)]},
