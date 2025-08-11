@@ -1,9 +1,5 @@
-from typing import Literal
-
+from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import END, StateGraph, MessagesState
-from langgraph.prebuilt import ToolNode
-
 import utils
 import config
 
@@ -99,45 +95,16 @@ if __name__ == '__main__':
     
 tools = utils.all_tool_functions()
 
-def reasoning(state: MessagesState):
-    print()
-    print("tool_maker is thinking...")
-    messages = state['messages']
-    tooled_up_model = config.default_langchain_model.bind_tools(tools)
-    response = tooled_up_model.invoke(messages)
-    return {"messages": [response]}
-
-def check_for_tool_calls(state: MessagesState) -> Literal["tools", END]:
-    messages = state['messages']
-    last_message = messages[-1]
-    
-    if last_message.tool_calls:
-        if not last_message.content.strip() == "":
-            print("tool_maker thought this:")
-            print(last_message.content)
-        print()
-        print("tool_maker is acting by invoking these tools:")
-        print([tool_call["name"] for tool_call in last_message.tool_calls])
-        return "tools"
-    
-    return END
-
-acting = ToolNode(tools)
-
-workflow = StateGraph(MessagesState)
-workflow.add_node("reasoning", reasoning)
-workflow.add_node("tools", acting)
-workflow.set_entry_point("reasoning")
-workflow.add_conditional_edges(
-    "reasoning",
-    check_for_tool_calls,
+# 创建ReAct代理
+agent = create_react_agent(
+    model=config.default_langchain_model,
+    tools=tools,
+    prompt=system_prompt
 )
-workflow.add_edge("tools", 'reasoning')
-graph = workflow.compile()
-
 
 def tool_maker(task: str) -> str:
     """Creates new tools for agents to use."""
-    return graph.invoke(
-        {"messages": [SystemMessage(system_prompt), HumanMessage(task)]}
+    result = agent.invoke(
+        {"messages": [HumanMessage(task)]}
     )
+    return result
