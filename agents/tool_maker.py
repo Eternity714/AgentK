@@ -1,7 +1,11 @@
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage
-import utils
 import config
+import utils
+from tools.overwrite_file import overwrite_file
+from tools.write_to_file import write_to_file
+from tools.read_file import read_file
+from tools.run_shell_command import run_shell_command
 
 system_prompt = """你是tool_maker，一个为其他代理开发LangChain工具的ReAct代理。
 
@@ -50,7 +54,7 @@ from langchain_core.tools import tool
 @tool
 def add_smiley_face(text: str) -> str:
     \"\"\"Adds an asccii face to the end of the supplied text.\"\"\"
-    return text + " :)"
+    return text + \" :)\"
 ```
 
 tests/tools/test_add_smiley_face.py
@@ -61,7 +65,7 @@ from tools import add_smiley_face
 
 class TestAddSmileyFace(unittest.TestCase):
     def test_that_it_adds_a_smiley_to_text(self):
-        self.assertEqual(add_smiley_face.add_smiley_face.invoke({ "text": "hello" }), "hello :)")
+        self.assertEqual(add_smiley_face.add_smiley_face.invoke({ \"text\": \"hello\" }), \"hello :)\")
 
 if __name__ == '__main__':
     unittest.main()
@@ -75,7 +79,7 @@ from langchain_core.tools import tool
 @tool
 def get_smiley() -> str:
     \"\"\"Get a smiley.\"\"\"
-    return ":)"
+    return \":)\"
 ```
 
 tests/tools/test_get_smiley.py
@@ -86,14 +90,14 @@ from tools import get_smiley
 
 class TestGetSmiley(unittest.TestCase):
     def test_that_it_returns_smiley(self):
-        self.assertEqual(get_smiley.get_smiley.invoke({}), ":)")
+        self.assertEqual(get_smiley.get_smiley.invoke({}), \":)\")
 
 if __name__ == '__main__':
     unittest.main()
 ```
 """
     
-tools = utils.all_tool_functions()
+tools = [overwrite_file, write_to_file, read_file, run_shell_command]
 
 # 创建ReAct代理
 agent = create_react_agent(
@@ -102,9 +106,16 @@ agent = create_react_agent(
     prompt=system_prompt
 )
 
-def tool_maker(task: str) -> str:
+def tool_maker(task: str, streaming: bool = True) -> str:
     """Creates new tools for agents to use."""
-    result = agent.invoke(
-        {"messages": [HumanMessage(task)]}
-    )
-    return result
+    if streaming:
+        return tool_maker_stream(task)
+    else:
+        result = agent.invoke(
+            {"messages": [HumanMessage(task)]}
+        )
+        return result
+
+def tool_maker_stream(task: str) -> str:
+    """Tool Maker的streaming模式实现"""
+    return utils.agent_stream(agent, task, "Tool Maker", "🔧")

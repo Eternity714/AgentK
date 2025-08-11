@@ -109,12 +109,52 @@ workflow.add_edge("tools", 'reasoning')
 
 graph = workflow.compile(checkpointer=utils.checkpointer)
 
-def hermes(uuid: str):
+def hermes(uuid: str, streaming: bool = True):
     """与用户交互以理解目标、规划代理如何实现目标、分配任务并协调代理活动的协调者。"""
     print(f"开始与AgentK的会话 (id:{uuid})")
     print("输入'exit'结束会话。")
+    
+    if streaming:
+        # 使用streaming模式
+        return hermes_stream(uuid)
+    else:
+        # 传统模式
+        return graph.invoke(
+            {"messages": [SystemMessage(system_prompt)]},
+            config={"configurable": {"thread_id": uuid}}
+        )
 
-    return graph.invoke(
+def hermes_stream(uuid: str):
+    """Hermes的streaming模式实现"""
+    config_dict = {"configurable": {"thread_id": uuid}}
+    
+    # 开始streaming
+    for chunk in graph.stream(
         {"messages": [SystemMessage(system_prompt)]},
-        config={"configurable": {"thread_id": uuid}}
-    )
+        config=config_dict,
+        stream_mode="updates"
+    ):
+        # 处理每个节点的更新
+        for node_name, node_update in chunk.items():
+            if node_name == "reasoning":
+                if "messages" in node_update and node_update["messages"]:
+                    last_message = node_update["messages"][-1]
+                    if hasattr(last_message, 'content') and last_message.content:
+                        print(f"\n💭 思考过程: {last_message.content}")
+                    if hasattr(last_message, 'tool_calls') and last_message.tool_calls:
+                        print(f"\n🔧 准备调用工具: {[tc['name'] for tc in last_message.tool_calls]}")
+            
+            elif node_name == "tools":
+                if "messages" in node_update and node_update["messages"]:
+                    for msg in node_update["messages"]:
+                        if hasattr(msg, 'content') and msg.content:
+                            print(f"\n⚡ 工具执行结果: {msg.content}")
+            
+            elif node_name == "feedback_and_wait_on_human_input":
+                if "messages" in node_update and node_update["messages"]:
+                    last_message = node_update["messages"][-1]
+                    if hasattr(last_message, 'content') and last_message.content:
+                        # 这是用户输入，不需要特殊显示
+                        pass
+    
+    return "会话结束"

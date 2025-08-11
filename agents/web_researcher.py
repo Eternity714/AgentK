@@ -1,6 +1,7 @@
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage
 import config
+import utils
 
 system_prompt = """你是web_researcher，一个能够使用网络研究答案的ReAct代理。
 
@@ -19,9 +20,16 @@ agent = create_react_agent(
     prompt=system_prompt
 )
 
-def web_researcher(task: str) -> str:
+def web_researcher(task: str, streaming: bool = True) -> str:
     """Researches the web."""
-    result = agent.invoke(
-        {"messages": [HumanMessage(task)]}
-    )
-    return result
+    if streaming:
+        return web_researcher_stream(task)
+    else:
+        result = agent.invoke(
+            {"messages": [HumanMessage(task)]}
+        )
+        return result
+
+def web_researcher_stream(task: str) -> str:
+    """Web Researcher的streaming模式实现"""
+    return utils.agent_stream(agent, task, "Web Researcher", "🌐")

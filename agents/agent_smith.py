@@ -1,17 +1,14 @@
 from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage
-import utils
 import config
+import utils
+from tools.assign_agent_to_task import assign_agent_to_task
+from tools.overwrite_file import overwrite_file
+from tools.write_to_file import write_to_file
+from tools.read_file import read_file
+from tools.run_shell_command import run_shell_command
 
-example_agent = "web_researcher"
-
-with open(f"agents/{example_agent}.py", 'r', encoding='utf-8') as file:
-    agent_code = file.read()
-    
-with open(f"tests/agents/test_{example_agent}.py", 'r', encoding='utf-8') as file:
-    agent_test_code = file.read()
-
-system_prompt = f"""你是agent_smith，一个专门开发其他ReAct代理的ReAct代理。
+system_prompt = """你是agent_smith，一个专门开发其他ReAct代理的ReAct代理。
 
 你是AgentK系统的一部分 - 一个自主进化的AGI系统。
 AgentK是一个由代理协作组成的自进化AGI，根据需要构建新代理来为用户完成任务。
@@ -48,22 +45,10 @@ AgentK的思维由以下组成：
 在认为代理完成之前，你必须始终运行冒烟测试并确保没有错误。
 避免创建仅仅是调用函数代理而没有额外推理的代理；这通常表明代理过于具体，应该更加通用。
 
-示例：
-agents/{example_agent}.py
-```
-{agent_code}
-```
-
-tests/agents/test_{example_agent}.py
-```
-{agent_test_code}
-```
-
-当前可用代理列表：
-{utils.all_agents(exclude=["hermes", "agent_smith"])}
+你可以参考现有的代理实现模式来创建新代理。
 """
     
-tools = utils.all_tool_functions()
+tools = [assign_agent_to_task, overwrite_file, write_to_file, read_file, run_shell_command]
 
 # 创建ReAct代理
 agent = create_react_agent(
@@ -72,9 +57,16 @@ agent = create_react_agent(
     prompt=system_prompt
 )
 
-def agent_smith(task: str) -> str:
+def agent_smith(task: str, streaming: bool = True) -> str:
     """Designs and implements new agents, each designed to play a unique role."""
-    result = agent.invoke(
-        {"messages": [HumanMessage(task)]}
-    )
-    return result
+    if streaming:
+        return agent_smith_stream(task)
+    else:
+        result = agent.invoke(
+            {"messages": [HumanMessage(task)]}
+        )
+        return result
+
+def agent_smith_stream(task: str) -> str:
+    """Agent Smith的streaming模式实现"""
+    return utils.agent_stream(agent, task, "Agent Smith", "🕴️")
